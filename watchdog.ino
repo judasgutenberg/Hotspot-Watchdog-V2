@@ -38,10 +38,13 @@ float altitude(const int32_t press, const float seaLevel) {
 }
 
 #include "config.h"
+int timeSkewAmount = 0; //i had it as much as 20000 for 20 seconds, but serves no purpose that I can tell
 long moxeeRebootTimes[] = {0,0,0,0,0,0,0,0,0,0,0};
 byte moxeeRebootCursor = 0;
 int timeOffset = 0;
 bool glblRemote = false;
+bool connectionFailureMode = true;  //when we're in connectionFailureMode, we check connection much more than secondsGranularity. otherwise, we check it every secondsGranularity
+int granularityWhenInConnectionFailureMode = 20;
 ESP8266WebServer server(80); //Server on port 80
 
 int moxeePowerSwitch = 14;
@@ -184,19 +187,20 @@ void sendRemoteData(String datastring) {
     rebootMoxee();
     Serial.print(hostGet);
   } else {
-   Serial.println(url);
-   clientGet.println("GET " + url + " HTTP/1.1");
-   clientGet.print("Host: ");
-   clientGet.println(hostGet);
-   clientGet.println("User-Agent: ESP8266/1.0");
-   clientGet.println("Connection: close\r\n\r\n");
-   unsigned long timeoutP = millis();
-   while (clientGet.available() == 0) {
+    connectionFailureMode = false;
+    Serial.println(url);
+    clientGet.println("GET " + url + " HTTP/1.1");
+    clientGet.print("Host: ");
+    clientGet.println(hostGet);
+    clientGet.println("User-Agent: ESP8266/1.0");
+    clientGet.println("Connection: close\r\n\r\n");
+    unsigned long timeoutP = millis();
+    while (clientGet.available() == 0) {
      if (millis() - timeoutP > 10000) {
       //let's try a simpler connection and if that fails, then reboot moxee
       clientGet.stop();
       if( clientGet.connect(hostGet, httpGetPort)){
-       timeOffset = timeOffset + 20000; //in case two probes are stepping on each other, make this one skew a 20 seconds from where it tried to upload data
+       timeOffset = timeOffset + timeSkewAmount; //in case two probes are stepping on each other, make this one skew a 20 seconds from where it tried to upload data
        clientGet.println("GET / HTTP/1.1");
        clientGet.print("Host: ");
        clientGet.println(hostGet);
@@ -214,13 +218,14 @@ void sendRemoteData(String datastring) {
       clientGet.stop();
       return;
      }
-   }
-   //just checks the 1st line of the server response. Could be expanded if needed.
-   while(clientGet.available()){
-     String retLine = clientGet.readStringUntil('\r');
-     Serial.println(retLine);
-     break; 
-   }
+    }
+    //just checks the 1st line of the server response. Could be expanded if needed.
+    while(clientGet.available()){
+      connectionFailureMode = false;
+      String retLine = clientGet.readStringUntil('\r');
+      Serial.println(retLine);
+      break; 
+    }
   } //end client connection if else             
   Serial.print(">>> Closing host: ");
   Serial.println(hostGet);
@@ -228,6 +233,7 @@ void sendRemoteData(String datastring) {
 }
 
 void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so here i have a little algorithm to reboot it.
+  connectionFailureMode = true;  //that's a global
   digitalWrite(moxeePowerSwitch, LOW);
   delay(7000);
   digitalWrite(moxeePowerSwitch, HIGH);
@@ -245,7 +251,12 @@ void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so 
 //LOOP----------------------------------------------------
 void loop(void){
   long nowTime = millis() + timeOffset;
-  if(nowTime - ((nowTime/(1000 * secondsGranularity) )*(1000 * secondsGranularity)) == 0 ) {  //send data to backend server every <secondsGranularity> seconds or so
+  int granularityToUse = secondsGranularity;
+  if(connectionFailureMode) {
+    granularityToUse = granularityWhenInConnectionFailureMode;
+    
+  }
+  if(nowTime - ((nowTime/(1000 * granularityToUse) )*(1000 * granularityToUse)) == 0 ) {  //send data to backend server every <granularityToUse> seconds or so
     
     glblRemote = true;
     handleWeatherData();
