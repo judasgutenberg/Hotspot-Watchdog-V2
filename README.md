@@ -6,4 +6,4 @@ This will eventually have a different backend. For now, only the watchdog.ino fi
 
 (Disparaging remarks removed; the wires hadn't been connected!)
 
-Yikes it really does seem broken now.
+May 29th: added a feature to check the connection very rapidly (every 20 seconds) in case the connection has failed.  This makes the watchdog restore connectivity very quickly should the fix require several phases (as often seems to be the case with the pattern of power button closes I've come up with).
