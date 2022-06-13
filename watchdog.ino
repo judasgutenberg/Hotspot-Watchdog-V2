@@ -44,7 +44,9 @@ byte moxeeRebootCursor = 0;
 int timeOffset = 0;
 bool glblRemote = false;
 bool connectionFailureMode = true;  //when we're in connectionFailureMode, we check connection much more than secondsGranularity. otherwise, we check it every secondsGranularity
-int granularityWhenInConnectionFailureMode = 20;
+int moxeeRebootCount = 0;
+
+
 ESP8266WebServer server(80); //Server on port 80
 
 int moxeePowerSwitch = 14;
@@ -233,11 +235,12 @@ void sendRemoteData(String datastring) {
 }
 
 void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so here i have a little algorithm to reboot it.
+  Serial.println("Rebooting Moxee");
   connectionFailureMode = true;  //that's a global
   digitalWrite(moxeePowerSwitch, LOW);
   delay(7000);
   digitalWrite(moxeePowerSwitch, HIGH);
-  delay(4000);
+  delay(15000);
   digitalWrite(moxeePowerSwitch, LOW);
   delay(4000);
   digitalWrite(moxeePowerSwitch, HIGH);
@@ -246,16 +249,29 @@ void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so 
   if(moxeeRebootCursor>9) {
     moxeeRebootCursor = 0;
   }
+  moxeeRebootCount++;
+}
+
+void rebootEsp() {
+  Serial.println("Rebooting ESP");
+  ESP.restart();
 }
 
 //LOOP----------------------------------------------------
 void loop(void){
   long nowTime = millis() + timeOffset;
+  
   int granularityToUse = secondsGranularity;
   if(connectionFailureMode) {
     granularityToUse = granularityWhenInConnectionFailureMode;
     
   }
+
+    //if we've been up for a week or there have been lots of moxee reboots in a short period of time, reboot esp8266
+  if(nowTime > 1000 * 86400 * 7 || nowTime < hotspotLimitedTimeFrame * 1000  && moxeeRebootCount > numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot) {
+    rebootEsp();
+  }
+  
   if(nowTime - ((nowTime/(1000 * granularityToUse) )*(1000 * granularityToUse)) == 0 ) {  //send data to backend server every <granularityToUse> seconds or so
     
     glblRemote = true;
@@ -263,6 +279,7 @@ void loop(void){
     glblRemote = false;
     timeClient.update(); //don't need to do this more than once every time we send data to the server
   }
+
   //Serial.println(dht.readTemperature());
   server.handleClient();          //Handle client requests
   
