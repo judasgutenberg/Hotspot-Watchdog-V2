@@ -240,9 +240,9 @@ void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so 
   digitalWrite(moxeePowerSwitch, LOW);
   delay(7000);
   digitalWrite(moxeePowerSwitch, HIGH);
-  delay(15000);
-  digitalWrite(moxeePowerSwitch, LOW);
-  delay(4000);
+  //delay(15000);
+  //digitalWrite(moxeePowerSwitch, LOW);
+  //delay(4000);
   digitalWrite(moxeePowerSwitch, HIGH);
   moxeeRebootTimes[moxeeRebootCursor] = timeClient.getEpochTime();
   moxeeRebootCursor++;
@@ -268,7 +268,7 @@ void loop(void){
   }
 
     //if we've been up for a week or there have been lots of moxee reboots in a short period of time, reboot esp8266
-  if(nowTime > 1000 * 86400 * 7 || nowTime < hotspotLimitedTimeFrame * 1000  && moxeeRebootCount > numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot) {
+  if(nowTime > 1000 * 86400 * 7 || nowTime < hotspotLimitedTimeFrame * 1000  && moxeeRebootCount >= numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot) {
     rebootEsp();
   }
   
