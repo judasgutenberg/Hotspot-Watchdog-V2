@@ -243,7 +243,7 @@ void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so 
   //delay(15000);
   //digitalWrite(moxeePowerSwitch, LOW);
   //delay(4000);
-  digitalWrite(moxeePowerSwitch, HIGH);
+  //digitalWrite(moxeePowerSwitch, HIGH);
   moxeeRebootTimes[moxeeRebootCursor] = timeClient.getEpochTime();
   moxeeRebootCursor++;
   if(moxeeRebootCursor>9) {
