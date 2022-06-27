@@ -140,6 +140,7 @@ void setup(void){
     if(wiFiSeconds > 80) {
       Serial.println("WiFi taking too long, rebooting Moxee");
       rebootMoxee();
+      wiFiSeconds = 0; //if you don't do this, you'll be stuck in a rebooting loop if WiFi fails once
     }
   }
   //If connection successful show IP address in serial monitor
