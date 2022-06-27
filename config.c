@@ -10,6 +10,7 @@ const char* hostGet = "your_server.com";
 const int locationId = 1; //for storing data from different locations in the backend
 const int secondsGranularity = 300; //how often to store data in the backend in seconds
 
-const int granularityWhenInConnectionFailureMode = 40;
+
+const int granularityWhenInConnectionFailureMode = 70; //40 was too little time for everything to come up and start working reliably, at least with my sketchy cellular connection
 const int numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot = 4;
 const int hotspotLimitedTimeFrame = 340; //seconds
