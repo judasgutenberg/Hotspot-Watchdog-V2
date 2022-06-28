@@ -12,5 +12,5 @@ const int secondsGranularity = 300; //how often to store data in the backend in 
 
 
 const int granularityWhenInConnectionFailureMode = 70; //40 was too little time for everything to come up and start working reliably, at least with my sketchy cellular connection
-const int numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot = 4;
+const int numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot = 4; //reboots moxee four times in 340 seconds (number below) and then reboots itself
 const int hotspotLimitedTimeFrame = 340; //seconds
