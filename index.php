@@ -1,6 +1,6 @@
 <!doctype html>
 <?php 
-
+include("./functions.php");
 //ini_set('display_errors', 1);
 //ini_set('display_startup_errors', 1);
 //error_reporting(E_ALL);
@@ -23,7 +23,7 @@ function genericSelect($id, $name, $defaultValue, $data, $event = "", $handler= 
 	$out.= "</select>";
 	return $out;
 }
-if(array_key_exists($REQUEST, "locationId")) {
+if(array_key_exists( "locationId", $_REQUEST)) {
 	$locationId = $_REQUEST["locationId"];
 } else {
 	$locationId = 1;
@@ -185,7 +185,7 @@ window.onload = function() {
 //Ajax script to get ADC voltage at every 5 Seconds 
 //Read This tutorial https://circuits4you.com/2018/02/04/esp8266-ajax-update-part-of-web-page-without-refreshing/
 
-getData("<?php echo $_REQUEST["locationId"]?>");
+getData("<?php echo gvfw("locationId")?>");
 //setInterval(function() {
   // Call a function repetatively with 5 Second interval
   //getData(locationId)
