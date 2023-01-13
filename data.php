@@ -8,7 +8,7 @@
 //ini_set('display_errors', 1);
 //ini_set('display_startup_errors', 1);
 //error_reporting(E_ALL);
-
+include("./functions.php");
 include("config.php");
 
 $conn = mysqli_connect($servername, $username, $password, $database);
@@ -19,19 +19,24 @@ $date = new DateTime("now", new DateTimeZone('America/New_York'));//obviously, y
 $formatedDateTime =  $date->format('Y-m-d H:i:s');
 //$formatedDateTime =  $date->format('H:i');
 
+$method = "";
+$out = "";
 if($_REQUEST) {
-	$mode = $_REQUEST["mode"];
-	$locationId = $_REQUEST["locationId"];
+	$mode = gvfw("mode");
+	$locationId = gvfw("locationId");
+	if($locationId == "") {
+		$locationId = 1;
+	}
 	if($mode=="kill") {
     $method  = "kill";
 	
-	} else if ($_REQUEST["mode"] && $mode=="getData") {
+	} else if ($mode=="getData") {
 
  
 		if(!$conn) {
 			$out = ["error"=>"bad database connection"];
 		} else {
-			$scale = $_REQUEST["scale"];
+			$scale = gvfw("scale");
 			if($scale == ""  || $scale == "fine") {
 				$sql = "SELECT * FROM " . $database . ".weather_data  
 				WHERE recorded > DATE_ADD(NOW(), INTERVAL -1 DAY) AND location_id=" . $locationId . " 
@@ -77,7 +82,7 @@ if($_REQUEST) {
       if(!$conn) {
         $out = ["error"=>"bad database connection"];
       } else {
-        $data = $_REQUEST["data"];
+        $data = gvfw("data");
         $arrData = explode("*", $data);
         $temperature = $arrData[0];
         $pressure = intval($arrData[1]);
@@ -95,7 +100,7 @@ if($_REQUEST) {
           mysqli_real_escape_string($conn, $gasMetric) .
           ",NULL,NULL,NULL,NULL)";
         //echo $sql;
-        if($storagePassword == $_REQUEST["storagePassword"]) { //prevents malicious data corruption
+        if($storagePassword == gvfw("storagePassword")) { //prevents malicious data corruption
           $result = mysqli_query($conn, $sql);
         }
         $method  = "insert";
@@ -110,7 +115,7 @@ if($_REQUEST) {
 	echo '{"message":"done", "method":"' . $method . '"}';
 }
 
-//some helpful sql examples for creating sql users:
+
 //CREATE USER 'weathertron'@'localhost' IDENTIFIED  BY 'your_password';
 //GRANT CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, SELECT, REFERENCES, RELOAD on *.* TO 'weathertron'@'localhost' WITH GRANT OPTION;
 //GRANT ALL PRIVILEGES ON *.* TO 'weathertron'@'localhost' WITH GRANT OPTION;
