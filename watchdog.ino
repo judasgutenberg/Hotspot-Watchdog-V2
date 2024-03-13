@@ -9,16 +9,20 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+
+
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+
+
 #include "Zanshin_BME680.h"  // Include the BME680 Sensor library
- 
 
+long connectionFailureTime = 0;
 BME680_Class BME680;  ///< Create an instance of the BME680 class
-
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
 float altitude(const int32_t press, const float seaLevel = 1013.25);
 
 float altitude(const int32_t press, const float seaLevel) {
@@ -38,11 +42,17 @@ float altitude(const int32_t press, const float seaLevel) {
 }
 
 #include "config.h"
+
+
+
 int timeSkewAmount = 0; //i had it as much as 20000 for 20 seconds, but serves no purpose that I can tell
 long moxeeRebootTimes[] = {0,0,0,0,0,0,0,0,0,0,0};
 byte moxeeRebootCursor = 0;
+
 int timeOffset = 0;
 bool glblRemote = false;
+
+
 bool connectionFailureMode = true;  //when we're in connectionFailureMode, we check connection much more than secondsGranularity. otherwise, we check it every secondsGranularity
 int moxeeRebootCount = 0;
 
@@ -57,7 +67,18 @@ void handleRoot() {
  server.send(200, "text/html", "nothing"); //Send web page
 }
 
+
+String JoinValsOnDelimiter(long vals[], String delimiter) {
+  String out = "";
+  for(int i=0; i<10; i++){
+    out = out + (String)vals[i] + delimiter;
+  }
+  return out;
+}
+
+
 void handleWeatherData() {
+  
   double humidityValue;
   double temperatureValue;
   double pressureValue;
@@ -72,8 +93,9 @@ void handleWeatherData() {
   
   static char     buf[16];                        // sprintf text buffer
   static uint16_t loopCounter = 0;                // Display iterations
-
-  BME680.getSensorData(temperatureRaw, humidityRaw, pressureRaw, gasRaw); 
+  if (sensorType == 680) {
+    BME680.getSensorData(temperatureRaw, humidityRaw, pressureRaw, gasRaw);
+  } 
       sprintf(buf, "%4d %3d.%02d", (loopCounter - 1) % 9999,  // Clamp to 9999,
           (int8_t)(temperatureRaw / 100), (uint8_t)(temperatureRaw % 100));   // Temp in decidegrees
   Serial.print(buf);
@@ -96,6 +118,7 @@ void handleWeatherData() {
 
   
   transmissionString = NullifyOrNumber(temperatureValue) + "*" + NullifyOrNumber(pressureValue) + "*" + NullifyOrNumber(humidityValue) + "*" + NullifyOrNumber(gasValue); //using delimited data instead of JSON to keep things simple
+  
   transmissionString = transmissionString + "\n" + JoinValsOnDelimiter(moxeeRebootTimes, "|");
   
   Serial.println(transmissionString);
@@ -105,14 +128,6 @@ void handleWeatherData() {
   } else {
     server.send(200, "text/plain", transmissionString); //Send values only to client ajax request
   }
-}
-
-String JoinValsOnDelimiter(long vals[], String delimiter) {
-  String out = "";
-  for(int i=0; i<10; i++){
-    out = out + (String)vals[i] + delimiter;
-  }
-  return out;
 }
 
 String NullifyOrNumber(double inVal) {
@@ -140,6 +155,7 @@ void setup(void){
     if(wiFiSeconds > 80) {
       Serial.println("WiFi taking too long, rebooting Moxee");
       rebootMoxee();
+      
       wiFiSeconds = 0; //if you don't do this, you'll be stuck in a rebooting loop if WiFi fails once
     }
   }
@@ -155,18 +171,22 @@ void setup(void){
   Serial.println("HTTP server started");
 
   Serial.print(F("- Initializing BME680 sensor\n"));
-  while (!BME680.begin(I2C_STANDARD_MODE)) {  // Start BME680 using I2C, use first device found
+  while (!BME680.begin(I2C_STANDARD_MODE) && sensorType == 680) {  // Start BME680 using I2C, use first device found
     Serial.print(F("-  Unable to find BME680. Trying again in 5 seconds.\n"));
     delay(5000);
   }  // of loop until device is located
   Serial.print(F("- Setting 16x oversampling for all sensors\n"));
-  BME680.setOversampling(TemperatureSensor, Oversample16);  // Use enumerated type values
-  BME680.setOversampling(HumiditySensor, Oversample16);     // Use enumerated type values
-  BME680.setOversampling(PressureSensor, Oversample16);     // Use enumerated type values
-  Serial.print(F("- Setting IIR filter to a value of 4 samples\n"));
-  BME680.setIIRFilter(IIR4);  // Use enumerated type values
-  Serial.print(F("- Setting gas measurement to 320\xC2\xB0\x43 for 150ms\n"));  // "�C" symbols
-  BME680.setGas(320, 150);  // 320�c for 150 milliseconds
+  if(sensorType == 680) {
+    BME680.setOversampling(TemperatureSensor, Oversample16);  // Use enumerated type values
+    BME680.setOversampling(HumiditySensor, Oversample16);     // Use enumerated type values
+    BME680.setOversampling(PressureSensor, Oversample16);     // Use enumerated type values
+    Serial.print(F("- Setting IIR filter to a value of 4 samples\n"));
+    BME680.setIIRFilter(IIR4);  // Use enumerated type values
+    Serial.print(F("- Setting gas measurement to 320\xC2\xB0\x43 for 150ms\n"));  // "�C" symbols
+    BME680.setGas(320, 150);  // 320�c for 150 milliseconds
+  }
+  
+  
   //initialize NTP client
   timeClient.begin();
   // Set offset time in seconds to adjust for your timezone, for example:
@@ -175,6 +195,7 @@ void setup(void){
   // GMT -1 = -3600
   // GMT 0 = 0
   timeClient.setTimeOffset(0);
+  
 }
 
 //SEND DATA TO A REMOTE SERVER TO STORE IN A DATABASE----------------------------------------------------
@@ -183,22 +204,31 @@ void sendRemoteData(String datastring) {
   const int httpGetPort = 80;
   String url;
   url =  (String)urlGet + "?storagePassword=" + (String)storagePassword + "&locationId=" + locationId + "&mode=saveData&data=" + datastring;
-  Serial.print(">>> Connecting to host: ");
+  Serial.println("\r>>> Connecting to host: ");
   //Serial.println(hostGet);
-  if (!clientGet.connect(hostGet, httpGetPort)) {
+  int attempts = 0;
+  while(!clientGet.connect(hostGet, httpGetPort) && attempts < connectionRetryNumber) {
+    attempts++;
+    delay(150);
+    
+  }
+  if (attempts >= connectionRetryNumber) {
     Serial.print("Connection failed, moxee rebooted: ");
+    connectionFailureTime = millis();
+    connectionFailureMode = true;
     rebootMoxee();
     Serial.print(hostGet);
   } else {
-    connectionFailureMode = false;
-    Serial.println(url);
-    clientGet.println("GET " + url + " HTTP/1.1");
-    clientGet.print("Host: ");
-    clientGet.println(hostGet);
-    clientGet.println("User-Agent: ESP8266/1.0");
-    clientGet.println("Connection: close\r\n\r\n");
-    unsigned long timeoutP = millis();
-    while (clientGet.available() == 0) {
+   connectionFailureTime = 0;
+   connectionFailureMode = false;
+   Serial.println(url);
+   clientGet.println("GET " + url + " HTTP/1.1");
+   clientGet.print("Host: ");
+   clientGet.println(hostGet);
+   clientGet.println("User-Agent: ESP8266/1.0");
+   clientGet.println("Connection: close\r\n\r\n");
+   unsigned long timeoutP = millis();
+   while (clientGet.available() == 0) {
      if (millis() - timeoutP > 10000) {
       //let's try a simpler connection and if that fails, then reboot moxee
       clientGet.stop();
@@ -211,40 +241,51 @@ void sendRemoteData(String datastring) {
        clientGet.println("Connection: close\r\n\r\n");
        unsigned long timeoutP2 = millis();
        if (millis() - timeoutP2 > 10000) {
-        Serial.print(">>> Client Timeout: moxee rebooted: ");
+        Serial.println(">>> Client Timeout: moxee rebooted: ");
         Serial.println(hostGet);
         rebootMoxee();
         clientGet.stop();
-        return;
-       }
-      }
+        return; 
+       }//if (millis()...
+      }//if (clientGet.connect(
       clientGet.stop();
       return;
-     }
-    }
-    //just checks the 1st line of the server response. Could be expanded if needed.
+     } //while (client
+   
+     //just checks the 1st line of the server response. Could be expanded if needed.
+
     while(clientGet.available()){
-      connectionFailureMode = false;
+      
       String retLine = clientGet.readStringUntil('\r');
       Serial.println(retLine);
       break; 
     }
+   }
   } //end client connection if else             
-  Serial.print(">>> Closing host: ");
+  Serial.println("\r>>> Closing host: ");
   Serial.println(hostGet);
   clientGet.stop();
+ 
+}
+
+void rebootEsp() {
+  Serial.println("Rebooting ESP");
+  ESP.restart();
 }
 
 void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so here i have a little algorithm to reboot it.
-  Serial.println("Rebooting Moxee");
-  connectionFailureMode = true;  //that's a global
   digitalWrite(moxeePowerSwitch, LOW);
   delay(7000);
   digitalWrite(moxeePowerSwitch, HIGH);
-  //delay(15000);
-  //digitalWrite(moxeePowerSwitch, LOW);
-  //delay(4000);
-  //digitalWrite(moxeePowerSwitch, HIGH);
+  //only do one reboot!
+   /*
+  delay(4000);
+  digitalWrite(moxeePowerSwitch, LOW);
+  delay(4000);
+  digitalWrite(moxeePowerSwitch, HIGH);
+  */
+  
+  
   moxeeRebootTimes[moxeeRebootCursor] = timeClient.getEpochTime();
   moxeeRebootCursor++;
   if(moxeeRebootCursor>9) {
@@ -253,14 +294,10 @@ void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so 
   moxeeRebootCount++;
 }
 
-void rebootEsp() {
-  Serial.println("Rebooting ESP");
-  ESP.restart();
-}
-
 //LOOP----------------------------------------------------
 void loop(void){
   long nowTime = millis() + timeOffset;
+  timeClient.update();
   
   int granularityToUse = secondsGranularity;
   if(connectionFailureMode) {
@@ -268,20 +305,27 @@ void loop(void){
     
   }
 
-    //if we've been up for a week or there have been lots of moxee reboots in a short period of time, reboot esp8266
+  //if we've been up for a week or there have been lots of moxee reboots in a short period of time, reboot esp8266
   if(nowTime > 1000 * 86400 * 7 || nowTime < hotspotLimitedTimeFrame * 1000  && moxeeRebootCount >= numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot) {
     rebootEsp();
   }
   
-  if(nowTime - ((nowTime/(1000 * granularityToUse) )*(1000 * granularityToUse)) == 0 ) {  //send data to backend server every <granularityToUse> seconds or so
+  
+  
+  if(nowTime - ((nowTime/(1000 * granularityToUse) )*(1000 * granularityToUse)) == 0 || connectionFailureTime>0 && connectionFailureTime + connectionFailureRetrySeconds * 1000 > millis()) {  //send data to backend server every <secondsGranularity> seconds or so
+    Serial.println(connectionFailureTime);
+    Serial.println(connectionFailureTime>0 && connectionFailureTime + connectionFailureRetrySeconds * 1000);
+    Serial.println("Epoch time:");
+    Serial.println(timeClient.getEpochTime());
+    
+    
+    
+    
     
     glblRemote = true;
     handleWeatherData();
     glblRemote = false;
-    timeClient.update(); //don't need to do this more than once every time we send data to the server
   }
-
   //Serial.println(dht.readTemperature());
   server.handleClient();          //Handle client requests
-  
 }
