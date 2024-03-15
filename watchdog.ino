@@ -149,6 +149,8 @@ void ShiftArrayUp(long array[], long newValue, int arraySize) {
 
 //SETUP----------------------------------------------------
 void setup(void){
+  //pinMode(11, OUTPUT);
+  
   pinMode(moxeePowerSwitch, OUTPUT);
   digitalWrite(moxeePowerSwitch, HIGH);
   Serial.begin(115200);
@@ -220,7 +222,7 @@ void sendRemoteData(String datastring) {
     delay(150);
     
   }
-  if (attempts >= connectionRetryNumber || true) {
+  if (attempts >= connectionRetryNumber) {
     Serial.print("Connection failed, moxee rebooted: ");
     connectionFailureTime = millis();
     connectionFailureMode = true;
@@ -240,13 +242,14 @@ void sendRemoteData(String datastring) {
      if (millis() - timeoutP > 10000) {
       //let's try a simpler connection and if that fails, then reboot moxee
       clientGet.stop();
-      if( clientGet.connect(hostGet, httpGetPort)){
+      if(clientGet.connect(hostGet, httpGetPort)){
        timeOffset = timeOffset + timeSkewAmount; //in case two probes are stepping on each other, make this one skew a 20 seconds from where it tried to upload data
        clientGet.println("GET / HTTP/1.1");
        clientGet.print("Host: ");
        clientGet.println(hostGet);
        clientGet.println("User-Agent: ESP8266/1.0");
        clientGet.println("Connection: close\r\n\r\n");
+       //this part looks sus, under what circumstances would timeoutP2 accumulate 10000 milliseconds here:
        unsigned long timeoutP2 = millis();
        if (millis() - timeoutP2 > 10000) {
         Serial.println(">>> Client Timeout: moxee rebooted: ");
@@ -260,8 +263,7 @@ void sendRemoteData(String datastring) {
       return;
      } //while (client
    
-     //just checks the 1st line of the server response. Could be expanded if needed.
-
+     //just checks the 1st line of the server response. Could be expanded if needed;
     while(clientGet.available()){
       
       String retLine = clientGet.readStringUntil('\r');
@@ -335,4 +337,8 @@ void loop(void){
   }
   //Serial.println(dht.readTemperature());
   server.handleClient();          //Handle client requests
+  //digitalWrite(11, 1);
+  //delay(100);
+  //digitalWrite(11, 0);
+  
 }
