@@ -47,7 +47,6 @@ float altitude(const int32_t press, const float seaLevel) {
 
 int timeSkewAmount = 0; //i had it as much as 20000 for 20 seconds, but serves no purpose that I can tell
 long moxeeRebootTimes[] = {0,0,0,0,0,0,0,0,0,0,0};
-byte moxeeRebootCursor = 0;
 
 int timeOffset = 0;
 bool glblRemote = false;
@@ -96,7 +95,7 @@ void handleWeatherData() {
   if (sensorType == 680) {
     BME680.getSensorData(temperatureRaw, humidityRaw, pressureRaw, gasRaw);
   } 
-      sprintf(buf, "%4d %3d.%02d", (loopCounter - 1) % 9999,  // Clamp to 9999,
+  sprintf(buf, "%4d %3d.%02d", (loopCounter - 1) % 9999,  // Clamp to 9999,
           (int8_t)(temperatureRaw / 100), (uint8_t)(temperatureRaw % 100));   // Temp in decidegrees
   Serial.print(buf);
   sprintf(buf, "%3d.%03d", (int8_t)(humidityRaw / 1000),
@@ -119,7 +118,7 @@ void handleWeatherData() {
   
   transmissionString = NullifyOrNumber(temperatureValue) + "*" + NullifyOrNumber(pressureValue) + "*" + NullifyOrNumber(humidityValue) + "*" + NullifyOrNumber(gasValue); //using delimited data instead of JSON to keep things simple
   
-  transmissionString = transmissionString + "\n" + JoinValsOnDelimiter(moxeeRebootTimes, "|");
+  transmissionString = transmissionString + "|" + JoinValsOnDelimiter(moxeeRebootTimes, "*");
   
   Serial.println(transmissionString);
   //had to use a global, died a little inside
@@ -137,6 +136,15 @@ String NullifyOrNumber(double inVal) {
 
     return String(inVal);
   }
+}
+
+void ShiftArrayUp(long array[], long newValue, int arraySize) {
+    // Shift elements down by one index
+    for (int i =  1; i < arraySize ; i++) {
+        array[i - 1] = array[i];
+    }
+    // Insert the new value at the beginning
+    array[arraySize - 1] = newValue;
 }
 
 //SETUP----------------------------------------------------
@@ -212,7 +220,7 @@ void sendRemoteData(String datastring) {
     delay(150);
     
   }
-  if (attempts >= connectionRetryNumber) {
+  if (attempts >= connectionRetryNumber || true) {
     Serial.print("Connection failed, moxee rebooted: ");
     connectionFailureTime = millis();
     connectionFailureMode = true;
@@ -285,12 +293,10 @@ void rebootMoxee() {  //moxee hotspot is so stupid that it has no watchdog.  so 
   digitalWrite(moxeePowerSwitch, HIGH);
   */
   
-  
-  moxeeRebootTimes[moxeeRebootCursor] = timeClient.getEpochTime();
-  moxeeRebootCursor++;
-  if(moxeeRebootCursor>9) {
-    moxeeRebootCursor = 0;
-  }
+ 
+  ShiftArrayUp(moxeeRebootTimes,  timeClient.getEpochTime(), 10);
+ 
+ 
   moxeeRebootCount++;
 }
 
@@ -307,6 +313,8 @@ void loop(void){
 
   //if we've been up for a week or there have been lots of moxee reboots in a short period of time, reboot esp8266
   if(nowTime > 1000 * 86400 * 7 || nowTime < hotspotLimitedTimeFrame * 1000  && moxeeRebootCount >= numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot) {
+    Serial.println("MOXEE REBOOT COUNT");
+    Serial.println(moxeeRebootCount);
     rebootEsp();
   }
   
@@ -315,9 +323,8 @@ void loop(void){
   if(nowTime - ((nowTime/(1000 * granularityToUse) )*(1000 * granularityToUse)) == 0 || connectionFailureTime>0 && connectionFailureTime + connectionFailureRetrySeconds * 1000 > millis()) {  //send data to backend server every <secondsGranularity> seconds or so
     Serial.println(connectionFailureTime);
     Serial.println(connectionFailureTime>0 && connectionFailureTime + connectionFailureRetrySeconds * 1000);
-    Serial.println("Epoch time:");
-    Serial.println(timeClient.getEpochTime());
-    
+    //Serial.println("Epoch time:");
+    //Serial.println(timeClient.getEpochTime());
     
     
     
