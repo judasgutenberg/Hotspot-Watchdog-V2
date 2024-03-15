@@ -8,35 +8,30 @@
 //ini_set('display_errors', 1);
 //ini_set('display_startup_errors', 1);
 //error_reporting(E_ALL);
-include("./functions.php");
+
 include("config.php");
 
 $conn = mysqli_connect($servername, $username, $password, $database);
 
 $mode = "";
-
+$out = [];
 $date = new DateTime("now", new DateTimeZone('America/New_York'));//obviously, you would use your timezone, not necessarily mine
 $formatedDateTime =  $date->format('Y-m-d H:i:s');
 //$formatedDateTime =  $date->format('H:i');
 
-$method = "";
-$out = "";
 if($_REQUEST) {
-	$mode = gvfw("mode");
-	$locationId = gvfw("locationId");
-	if($locationId == "") {
-		$locationId = 1;
-	}
+	$mode = $_REQUEST["mode"];
+	$locationId = $_REQUEST["locationId"];
 	if($mode=="kill") {
     $method  = "kill";
 	
-	} else if ($mode=="getData") {
+	} else if ($_REQUEST["mode"] && $mode=="getData") {
 
  
 		if(!$conn) {
 			$out = ["error"=>"bad database connection"];
 		} else {
-			$scale = gvfw("scale");
+			$scale = $_REQUEST["scale"];
 			if($scale == ""  || $scale == "fine") {
 				$sql = "SELECT * FROM " . $database . ".weather_data  
 				WHERE recorded > DATE_ADD(NOW(), INTERVAL -1 DAY) AND location_id=" . $locationId . " 
@@ -79,19 +74,25 @@ if($_REQUEST) {
 		}
 		$method  = "read";	
 	} else if ($mode == "saveData") { //save data
+      //test url;:
+      // //http://randomsprocket.com/weather/data.php?storagePassword=butterfly&locationId=3&mode=saveData&data=10736712.76*12713103.20*1075869.28*NULL|0*0*1710464489*1710464504*1710464519*1710464534*1710464549*1710464563*1710464579*1710464593*
       if(!$conn) {
         $out = ["error"=>"bad database connection"];
       } else {
-        $data = gvfw("data");
-        $arrData = explode("*", $data);
-        $temperature = $arrData[0];
-        $pressure = intval($arrData[1]);
-        $humidity = $arrData[2];
+        $data = $_REQUEST["data"];
+        $lines = explode("|",$data);
+        $weatherInfoString = $lines[0];
+        $arrWeatherData = explode("*", $weatherInfoString);
+        
+        $temperature = $arrWeatherData[0];
+        $pressure = intval($arrWeatherData[1]);
+        $humidity = $arrWeatherData[2];
         $gasMetric = "NULL";
-        if(count($arrData)>3) {
-          $gasMetric = $arrData[3];
+        if(count($arrWeatherData)>3) {
+          $gasMetric = $arrWeatherData[3];
         }
-        $sql = "INSERT INTO weather_data(location_id, recorded, temperature, pressure, humidity, gas_metric, wind_direction, precipitation, wind_speed, wind_increment) VALUES (" . 
+		//select * from weathertron.weather_data where location_id=3 order by recorded desc limit 0,10;
+        $weatherSql = "INSERT INTO weather_data(location_id, recorded, temperature, pressure, humidity, gas_metric, wind_direction, precipitation, wind_speed, wind_increment) VALUES (" . 
           mysqli_real_escape_string($conn, $locationId) . ",'" .  
           mysqli_real_escape_string($conn, $formatedDateTime)  . "'," . 
           mysqli_real_escape_string($conn, $temperature) . "," . 
@@ -99,9 +100,24 @@ if($_REQUEST) {
           mysqli_real_escape_string($conn, $humidity) . "," . 
           mysqli_real_escape_string($conn, $gasMetric) .
           ",NULL,NULL,NULL,NULL)";
-        //echo $sql;
-        if($storagePassword == gvfw("storagePassword")) { //prevents malicious data corruption
-          $result = mysqli_query($conn, $sql);
+        //echo $weatherSql;
+        if(count($lines)>1) {
+          $recentReboots = explode("*", $lines[1]);
+          foreach($recentReboots as $rebootOccasion) {
+            if(intval($rebootOccasion) > 0 && $storagePassword == $_REQUEST["storagePassword"]) {
+              $dt = new DateTime();
+              $dt->setTimestamp($rebootOccasion);
+              $rebootOccasionSql = $dt->format('Y-m-d H:i:s');
+              $rebootLogSql = "INSERT INTO reboot_log(location_id, recorded) SELECT " . intval($locationId) . ",'" .$rebootOccasionSql . "' 
+                FROM DUAL WHERE NOT EXISTS (SELECT * FROM reboot_log WHERE location_id=" . intval($locationId) . " AND recorded='" . $rebootOccasionSql . "' LIMIT 1)";
+               
+              $result = mysqli_query($conn, $rebootLogSql);
+            }
+          }
+        
+        }
+        if($storagePassword == $_REQUEST["storagePassword"]) { //prevents malicious data corruption
+          $result = mysqli_query($conn, $weatherSql);
         }
         $method  = "insert";
         $out = Array("message" => "done", "method"=>$method);
@@ -115,7 +131,7 @@ if($_REQUEST) {
 	echo '{"message":"done", "method":"' . $method . '"}';
 }
 
-
+//some helpful sql examples for creating sql users:
 //CREATE USER 'weathertron'@'localhost' IDENTIFIED  BY 'your_password';
 //GRANT CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, SELECT, REFERENCES, RELOAD on *.* TO 'weathertron'@'localhost' WITH GRANT OPTION;
 //GRANT ALL PRIVILEGES ON *.* TO 'weathertron'@'localhost' WITH GRANT OPTION;
