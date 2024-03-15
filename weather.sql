@@ -12,4 +12,11 @@ precipitation INT NULL,
 wind_speed DECIMAL(8,3) NULL,
 wind_increment INT NULL,
 gas_metric DECIMAL(15,4) NULL
-)
+);
+
+
+CREATE TABLE reboot_log(
+  reboot_log_id INT AUTO_INCREMENT PRIMARY KEY,
+  location_id INT,
+  recorded DATETIME
+);
