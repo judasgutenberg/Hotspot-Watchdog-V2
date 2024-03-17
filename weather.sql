@@ -22,9 +22,12 @@ CREATE TABLE reboot_log(
 
 CREATE TABLE location(
   location_id INT AUTO_INCREMENT PRIMARY KEY,
+  device_type_feature_id INT NULL,
   name VARCHAR(100) NULL,
   description VARCHAR(2000) NULL,
   device_id INT NULL,
+  i2c_address INT NULL,
+  connecting_device_id INT NULL,
   created DATETIME
 );
 
@@ -58,6 +61,7 @@ CREATE TABLE device_type_feature(
   can_be_input TINYINT,
   can_be_output TINYINT,
   can_be_analog TINYINT,
+  pin_number INT,
   name VARCHAR(100) NULL,
   description VARCHAR(2000) NULL,
   created DATETIME
@@ -70,9 +74,26 @@ CREATE TABLE device_feature(
   value INT NULL,
   name VARCHAR(100) NULL,
   description VARCHAR(2000) NULL,
+  device_feature ADD enabled TINYINT DEFAULT 0,
   created DATETIME,
   modified DATETIME
 );
 
+--fixes for older versions of the schema:
+--ALTER TABLE device_feature ADD enabled TINYINT DEFAULT 0;
+--ALTER TABLE location ADD device_id INT NULL;
+--ALTER TABLE location ADD device_type_feature_id INT NULL;
+--ALTER TABLE location ADD i2c_address INT NULL;
+--ALTER TABLE location ADD connecting_device_id INT NULL;
 
+INSERT INTO device_type (name, architecture, power_voltage, created) VALUES ('NodeMCU', 'ESP8266', 3.3, NOW());
+INSERT INTO device (name, device_type_id, created) VALUES ('Hotspot Watchdog', 1, NOW());
+INSERT INTO location (location_id, name, device_id, created) VALUES (1, 'outside cabin', 1, NOW());
+INSERT INTO location (location_id, name, device_id, created) VALUES (2, 'downstairs cabin', 1, NOW());
+INSERT INTO location (location_id, name, device_id, created) VALUES (3, 'upstairs cabin', 1, NOW());
+
+INSERT INTO feature_type (name, created) VALUES ('digital output',  NOW());
+
+INSERT INTO device_type_feature (name, created, can_be_input, can_be_output, can_be_analog, pin_number) VALUES ('D14',  NOW(), 1, 1, 0, 13);
+INSERT INTO device_feature (name, created, enabled) VALUES ('Moxee Power Switch',  NOW(), 1);
 
