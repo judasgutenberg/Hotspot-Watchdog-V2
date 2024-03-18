@@ -22,7 +22,7 @@ $conn = mysqli_connect($servername, $username, $password, $database);
 $table = strtolower(gvfw('table', "document"));
 $action = strtolower(gvfw('action', "list"));
 $user = logIn();
-
+$deviceId = gvfa('device_id', $_GET);
 $userId = gvfa("user_id", $user);
 //used to impersonate another user
 
@@ -33,7 +33,7 @@ if ($poser) {
 $out = "";
 $errors = NULL;
  
-$documentId = gvfw('document_id');
+ 
 $scanId = gvfw('scan_id');
 $testId = gvfw('test_id');
 $wordListId = gvfw('word_list_id');
@@ -147,14 +147,12 @@ if ($user) {
 
 
 	} else if($table == "devices") {
-    if($documentId == "") {
+ 
 
-      $out .= devices($userId);
+    $out .= devices($userId);
 
       
-    } else {
-   
-    }
+ 
  
   
   } else if ($action == "startcreate") {
@@ -196,7 +194,7 @@ if ($user) {
 }
 
 
-echo bodyWrap($out, $user, $documentId, $poser);
+echo bodyWrap($out, $user, $deviceId, $poser);
 
 function utilityForm($foundData) {
   $out = "";
@@ -236,7 +234,7 @@ function getUtilityInfo($user, $key){
   return $foundData;
 }
 
-function bodyWrap($content, $user, $documentId, $poser = null) {
+function bodyWrap($content, $user, $deviceId, $poser = null) {
   $out = "";
   $out .= "<html>\n";
   $out .= "<head>\n";
@@ -543,20 +541,8 @@ function newUserForm($error = NULL) {
 function utilities($user, $viewMode = "list") {
   $utilitiesData = array(
 
-    [
-      'label' => 'List Proper Names',
-      'url' => '?table=utilities&action=propernames',
-      'description' => "Scan document and show what appear to be proper names.",
-      'action' => 'properNames(<document_id/>)'
-
-    ],
-    [
-      'label' => 'Show dates',
-      'url' => '?table=utilities&action=showdates',
-      'description' => "Scan document and find anything that appear to be dates.",
-      'action' => 'showDates(<document_id/>)'
-
-    ],
+ 
+ 
     [
       'label' => 'Impersonate Another User',
       'description' => "Act as a different user.",
@@ -1050,8 +1036,8 @@ function tabNav() {
 	);
 	$out = "<div class='nav'>";
   $currentMode = gvfa('table', $_REQUEST);
-  $wordListId = gvfa('word_list_id', $_REQUEST);
-  $documentId = gvfa('document_id', $_REQUEST);
+  $deviceId = gvfa('device_id', $_REQUEST);
+ 
   foreach($tabData as &$tab) {
 
     if($currentMode == "") {
@@ -1067,8 +1053,8 @@ function tabNav() {
     if($table!= "word_list"){
       //$url .= "&word_list_id=" . $wordListId ; //too messy
     }
-    if($table!= "document"){
-      $url .= "&document_id=" . $documentId;
+    if($table!= "device"){
+      $url .= "&device_id=" . $deviceId;
     }
     
     $out .= "<div class='" . $class . "'><a href='" . $url . "'>" . $label . "</a></div>";
@@ -1370,7 +1356,7 @@ function saveX($userId){
 }
 
   
-function deleteX($userId, $documentId){
+function deleteX($userId, $xxx){
   Global $conn;
   $sql = "DELETE FROM document WHERE document_id=" . intval($documentId) . "  AND user_id=" . intval($userId);
   //die($sql);
