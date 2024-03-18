@@ -28,6 +28,7 @@ CREATE TABLE location(
   device_id INT NULL,
   i2c_address INT NULL,
   connecting_device_id INT NULL,
+  user_id INT NULL,
   created DATETIME
 );
 
@@ -37,6 +38,7 @@ CREATE TABLE device_type(
   description VARCHAR(2000) NULL,
   architecture VARCHAR(100) NULL,
   power_voltage DECIMAL(9,3) NULL,
+  user_id INT NULL,
   created DATETIME
 );
 
@@ -45,6 +47,7 @@ CREATE TABLE device(
   device_type_id INT,
   name VARCHAR(100) NULL,
   description VARCHAR(2000) NULL,
+  user_id INT NULL,
   created DATETIME
 );
 
@@ -52,6 +55,7 @@ CREATE TABLE feature_type(
   feature_type_id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NULL,
   description VARCHAR(2000) NULL,
+  user_id INT NULL,
   created DATETIME
 );
 
@@ -64,19 +68,24 @@ CREATE TABLE device_type_feature(
   pin_number INT,
   name VARCHAR(100) NULL,
   description VARCHAR(2000) NULL,
+  user_id INT NULL,
   created DATETIME
+  
 );
 
 CREATE TABLE device_feature(
   device_feature_id INT AUTO_INCREMENT PRIMARY KEY,
   device_type_feature_id INT,
+  
   device_type_id INT,
   value INT NULL,
   name VARCHAR(100) NULL,
   description VARCHAR(2000) NULL,
   device_feature ADD enabled TINYINT DEFAULT 0,
+  user_id INT NULL,
   created DATETIME,
   modified DATETIME
+  
 );
 
 --fixes for older versions of the schema:
@@ -85,6 +94,13 @@ CREATE TABLE device_feature(
 --ALTER TABLE location ADD device_type_feature_id INT NULL;
 --ALTER TABLE location ADD i2c_address INT NULL;
 --ALTER TABLE location ADD connecting_device_id INT NULL;
+--ALTER TABLE location ADD user_id INT NULL;
+--ALTER TABLE device_type ADD user_id INT NULL;
+--ALTER TABLE device ADD user_id INT NULL;
+--ALTER TABLE feature_type ADD user_id INT NULL;
+--ALTER TABLE device_type_feature ADD user_id INT NULL;
+--ALTER TABLE device_feature ADD user_id INT NULL;
+ 
 
 INSERT INTO device_type (name, architecture, power_voltage, created) VALUES ('NodeMCU', 'ESP8266', 3.3, NOW());
 INSERT INTO device (name, device_type_id, created) VALUES ('Hotspot Watchdog', 1, NOW());
