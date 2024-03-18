@@ -149,7 +149,7 @@ void ShiftArrayUp(long array[], long newValue, int arraySize) {
 
 //SETUP----------------------------------------------------
 void setup(void){
-  //pinMode(11, OUTPUT);
+  //pinMode(0, OUTPUT);
   
   pinMode(moxeePowerSwitch, OUTPUT);
   digitalWrite(moxeePowerSwitch, HIGH);
@@ -337,8 +337,8 @@ void loop(void){
   }
   //Serial.println(dht.readTemperature());
   server.handleClient();          //Handle client requests
-  //digitalWrite(11, 1);
+  //digitalWrite(0, HIGH );
   //delay(100);
-  //digitalWrite(11, 0);
+  //digitalWrite(0, LOW);
   
 }
