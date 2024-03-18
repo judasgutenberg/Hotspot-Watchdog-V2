@@ -1,10 +1,10 @@
 <?php 
-//libeltron
-//gus mueller, January 1 2024
+//server-based remote controller using microcontrollers 
+//gus mueller, March 18 2024
 //////////////////////////////////////////////////////////////
-//troubleURLs: http://randomsprocket.com/libeltron/?table=document&action=browse&page=170&document_id=55
-use VaderSentiment\SentimentIntensityAnalyzer;
-use setasign\Fpdi\Tcpdf\Fpdi;
+//troubleURLs:  
+ 
+ 
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -45,7 +45,7 @@ $datatype = gvfw('datatype');
  
 if ($action == "logout") {
   logOut();
-  header("Location: ?table=login");
+  header("Location: ?action=login");
   die();
 } else if  ($action == "disimpersonate") {
   disImpersonate();
@@ -53,40 +53,27 @@ if ($action == "logout") {
   die();
 }
 
-if($_POST || gvfw("table") && $table == "download") { //gvfw("table") 
+if($_POST || gvfw("table")) { //gvfw("table") 
 
  
-	if ($table == "login") {
+	if ($action == "login") {
 		loginUser();
   } else if (strtolower($action) == "create user") {
 		$errors = createUser();
-  } else if ((strtolower($action) == "create test" || strtolower($action) == "save test") && $user != false) {
-    saveTest($user["user_id"] );
-  } else if ((strtolower($action) == "create word" || strtolower($action) == "save word") && $user != false) {
- 
-    $errors =  saveWord($user["user_id"] );
-  } else if ((strtolower($action) == "create word list" || strtolower($action) == "save word list") && $user != false) {
-    $errors =  saveWordList($user["user_id"] );
-	} else if ((strtolower($action) == "upload document" || strtolower($action) == "save document") && $user != false) {
-    saveDocument($user["user_id"] );
-	
-	} else if ($table == "download" && $user != false) {
-		$path = gvfw("path");
-		$friendly = gvfw("friendly");
-		download($path, $friendly);
-		die();
 	}  else if (strtolower($table) == "run") {
     //oh, we're a utility, though we never get here
 
+  } else if(beginsWith(strtolower($action), "save") || beginsWith(strtolower($action), "create")) {
+
+    $errors = genericEntitySave($userId, $table);
+
+    
   }
 } else {
  
 }
-
  
-
- 
-if($user) {
+if ($user) {
 	$out .= "<div>\n";
   if($action == "genericformsave") { //Definitely fix the security here!!!!
     //this only works for checkboxes for now
@@ -106,31 +93,7 @@ if($user) {
     $result = mysqli_query($conn, $sql);
     var_dump($result);
     die($sql);
-  } else if ($action == "setcriticality"){
-    $criticality = gvfw('criticality');
-    $issueContent = gvfw('issue_content');
-    $issueId = intval(gvfw('issue_id'));
-    $pageNumber = gvfw('page');
-    if($issueId > 0) {
-      $sql = "UPDATE issue SET criticality='" .  intval($criticality) . "' WHERE document_id='" . intval($documentId) . "' AND scan_id='" . intval($scanId) . "' AND issue_id='" .  intval($issueId) . "'";
-    } else {
-      $sql = "UPDATE issue SET criticality='" .  intval($criticality) . "' WHERE document_id='" . intval($documentId) . "' AND scan_id='" . intval($scanId) . "' AND issue_content='" .  mysqli_real_escape_string($conn, $issueContent) . "'";
-    }
-    if(intval($pageNumber) == $pageNumber && $pageNumber > 0) {
-      $sql .= " AND page_number=" . $pageNumber;
-    }
-    
-    $result = mysqli_query($conn, $sql);
-    var_dump($result);
-    die($sql);
-
-
-  } else if ($action == "getform") {
-    if($table == "word") {
-
-      $html = wordForm(NULL, "", $userId, "", $_GET);
-    }
-    die($html);
+  
   }
   if ($table == "utilities") {
     $action = $_GET['action']; //$_POST will have this as "run"
@@ -179,12 +142,8 @@ if($user) {
    } else if(!$action) {
     $out .= utilities($user, "list");
    }
-  } else if($table == "issue") {
-    if($action== "savenote"){
-      $issueId = gvfw('issue_id');
-      $note  = gvfw('note');
-      $errors = saveNote($issueId, $note);
-    }
+ 
+ 
 
 
 	} else if($table == "devices") {
@@ -194,48 +153,10 @@ if($user) {
 
       
     } else {
-      if($action == "delete"){
-        $out .= deleteDocument($userId, $documentId);
-      } else if($action == "browse"){
-          if($datatype == 'json') {
-
-
-          } else {
-            $out .= browseDocument($userId, $documentId, $page);
-          }
-      } else {
-       $out .= documentForm(NULL, $documentId, $userId);
-      }
+   
     }
-  } else if($table == "word_list") {
-      
-      if($wordListId == "") {
-
-        $out .= wordLists($userId);
-      } else {
-        $out .= wordListForm(NULL, $wordListId, $userId);
-      }
-	} else if($table == "word") {
-    if($datatype == 'json') { 
-      $searchTerm = gvfw('search_term');
-      die(jsonWordSearch($searchTerm, $wordListId, $userId));
-    } else{
-      $wordId = gvfw('word_id');
-      $searchTerm = gvfw('search_term');
-      if($wordId == "") {
-
-        $out .= words($userId, $wordListId, $searchTerm);
-      } else {
-        $out .= wordForm(NULL, $wordId, $userId);
-      }
-    } 
+ 
   
-	} else if($table == "test") {
-    if($testId == "") {
-      $out .= tests($userId);
-    } else {
-      $out .= testForm(NULL, $testId, $userId);
-    }
   } else if ($action == "startcreate") {
   
     if ($table == "test") {
@@ -246,7 +167,7 @@ if($user) {
       $out .= newUserForm($errors);
     } else {
 
-      $out .= genericEntityForm($table, $errors);
+      $out .= genericEntityForm($userId, $table, $errors);
     }
  
  
@@ -255,7 +176,7 @@ if($user) {
  
   } else {
     if(gvfw($table . '_id')) {
-      $out .= genericEntityForm($table, $errors);
+      $out .= genericEntityForm($userId, $table, $errors);
 
     } else {
       $out .= genericEntityList($userId, $table);
@@ -408,7 +329,7 @@ function loginForm() {
   $out .= "<form method='post' name='loginform' id='loginform'>\n";
   $out .= "<strong>Login here:</strong>  email: <input name='email' type='text'>\n";
   $out .= "password: <input name='password' type='password'>\n";
-  $out .= "<input name='table' value='login' type='submit'>\n";
+  $out .= "<input name='action' value='login' type='submit'>\n";
   $out .= "<div> or  <div class='basicbutton'><a href=\"?table=user&action=startcreate\">Create Account</a></div>\n";
   $out .= "</form>\n";
   return $out;
@@ -787,7 +708,8 @@ function generateFormElements($parentKey, $data) {
   return $formElements;
 }
 
-function genericEntityList($user, $table) {
+//also returns pk by reference
+function schemaArrayFromSchema($table, &$pk){
   Global $conn;
   $sql = "EXPLAIN " . $table;
   $result = mysqli_query($conn, $sql);
@@ -797,44 +719,67 @@ function genericEntityList($user, $table) {
 	  $rows = mysqli_fetch_all($result, MYSQLI_ASSOC);
     
     foreach($rows as $row) {
+      $fieldName = $row["Field"];
+      $type = "string";
       if($row["Key"] == "PRI"){
-        $pk = $row["Field"];
+        $pk = $fieldName;
+        $type = "hidden";
       }
-      $headerData[] = ["label" => $row["Field"], "name" => $row["Field"], "type" => "string" ];
+      if($row["Type"] == "tinyint(4)" ){
+        $type = "checkbox";
+      }
+      if($fieldName != "user_id") {
+        $headerData[] = ["label" => $fieldName, "name" => $fieldName, "type" => $type ];
+      }
+      
     }
   }
-  $thisDataSql = "SELECT * FROM " . $table;
- 
-  $thisDataResult = mysqli_query($conn, $thisDataSql);
-  $thisDataRows = mysqli_fetch_all($thisDataResult, MYSQLI_ASSOC); 
-  $toolsTemplate = "<a href='?table=" . $table . "&" . $table . "_id=<" . $table . "_id/>'>Edit Info</a>";
-  return genericTable($thisDataRows, $headerData, $toolsTemplate, null, $table, $pk);
+  return $headerData;
 }
 
-function genericEntityForm($table, $errors){
+function genericEntityList($userId, $table) {
   Global $conn;
-  $sql = "EXPLAIN " . $table;
-  $result = mysqli_query($conn, $sql);
-  $data = [];
-  if($result) {
+  $headerData = schemaArrayFromSchema($table, $pk);
+  $thisDataSql = "SELECT * FROM " . $table . " WHERE user_id=" . intval($userId);
  
-	  $rows = mysqli_fetch_all($result, MYSQLI_ASSOC);
- 
-    foreach($rows as $row) {
-      if($row["Key"] == "PRI"){
-        $pk = $row["Field"];
-      }
-      $data[] = ["label" => $row["Field"], "name" => $row["Field"], "type" => "string", "error" =>  gvfa('name', $errors) ];
-    }
-    $pkValue =  gvfa($pk, $_GET);
-    $thisDataSql = "SELECT * FROM " . $table . " WHERE " . $pk . " = '" . $pkValue . "'";
-
-    $thisDataResult = mysqli_query($conn, $thisDataSql);
-    $thisDataRows = mysqli_fetch_all($thisDataResult, MYSQLI_ASSOC);
- 
-    $data = updateDataWithRows($data, $thisDataRows[0]);
+  $thisDataResult = mysqli_query($conn, $thisDataSql);
+  if($thisDataResult) {
+    $thisDataRows = mysqli_fetch_all($thisDataResult, MYSQLI_ASSOC); 
+    $toolsTemplate = "<a href='?table=" . $table . "&" . $table . "_id=<" . $table . "_id/>'>Edit Info</a>";
+    return genericTable($thisDataRows, $headerData, $toolsTemplate, null, $table, $pk);
   }
-  return genericForm($data, "Save " . $table, "Saving...");
+}
+
+function genericEntityForm($userId, $table, $errors){
+  Global $conn;
+  $data = schemaArrayFromSchema($table, $pk);
+  $pkValue =  gvfa($pk, $_GET);
+  $thisDataSql = "SELECT * FROM " . $table . " WHERE " . $pk . " = '" . $pkValue . "' AND user_id=" . intval($userId);
+
+  $thisDataResult = mysqli_query($conn, $thisDataSql);
+  if($thisDataResult) {
+    $thisDataRows = mysqli_fetch_all($thisDataResult, MYSQLI_ASSOC);
+
+    $data = updateDataWithRows($data, $thisDataRows[0]);
+
+    return genericForm($data, "Save " . $table, "Saving...");
+  }
+}
+
+ 
+function genericEntitySave($userId, $table) {
+  Global $conn;
+  $data = schemaArrayFromSchema($table, $pk);
+  $data = $_POST;
+  unset($data['action']);
+  unset($data[$pk]);
+  unset($data['created']);
+  $sql = insertUpdateSql($conn, $table, array($pk => $_GET[$table . '_id']), $data);
+  //echo $sql;
+  //die();
+  $result = mysqli_query($conn, $sql);
+  $id = mysqli_insert_id($conn);
+  header("Location: ?table=" . $table);
 }
 
 function updateDataWithRows($data, $thisDataRows) {
@@ -1137,7 +1082,7 @@ function tabNav() {
 function devices($userId) {
   Global $conn;
   $table = "device";
-  $sql = "SELECT * FROM `" . $table . "` ORDER BY created DESC ";
+  $sql = "SELECT * FROM `" . $table . "` WHERE user_id = '" . intval($userId) . "' ORDER BY created DESC ";
   //echo $sql;
   $result = mysqli_query($conn, $sql);
   $out = "";
