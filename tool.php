@@ -726,12 +726,20 @@ function schemaArrayFromSchema($table, &$pk){
 function genericEntityList($userId, $table) {
   Global $conn;
   $headerData = schemaArrayFromSchema($table, $pk);
+
   $thisDataSql = "SELECT * FROM " . $table . " WHERE user_id=" . intval($userId);
- 
+  $deviceId = gvfw("device_id");
+  if($deviceId){
+    $thisDataSql .= " AND device_id=" . intval($deviceId);
+  }
   $thisDataResult = mysqli_query($conn, $thisDataSql);
   if($thisDataResult) {
     $thisDataRows = mysqli_fetch_all($thisDataResult, MYSQLI_ASSOC); 
     $toolsTemplate = "<a href='?table=" . $table . "&" . $table . "_id=<" . $table . "_id/>'>Edit Info</a>";
+    if($table == "device") {
+      $toolsTemplate .= " | <a href='?table=device_feature&device_id=<" . $table . "_id/>'>Device Features</a>";
+
+    }
     return genericTable($thisDataRows, $headerData, $toolsTemplate, null, $table, $pk);
   }
 }
