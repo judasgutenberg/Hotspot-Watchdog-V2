@@ -67,7 +67,7 @@ CREATE TABLE device_type_feature(
 CREATE TABLE device_feature(
   device_feature_id INT AUTO_INCREMENT PRIMARY KEY,
   device_type_feature_id INT,
-  
+  device_id INT,
   device_type_id INT,
   value INT NULL,
   name VARCHAR(100) NULL,
@@ -90,7 +90,7 @@ CREATE TABLE device_feature(
 --ALTER TABLE device ADD i2c_address INT NULL;
 --ALTER TABLE device ADD parent_device_id INT NULL;
 
- 
+ ALTER TABLE device_feature ADD device_id INT NOT NULL;
 
 INSERT INTO device_type (name, architecture, power_voltage, created) VALUES ('NodeMCU', 'ESP8266', 3.3, NOW());
 INSERT INTO device (name, device_type_id, created) VALUES ('Hotspot Watchdog', 1, NOW());
