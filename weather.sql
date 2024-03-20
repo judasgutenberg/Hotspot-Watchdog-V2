@@ -20,18 +20,6 @@ CREATE TABLE reboot_log(
   recorded DATETIME
 );
 
-CREATE TABLE location(
-  location_id INT AUTO_INCREMENT PRIMARY KEY,
-  device_type_feature_id INT NULL,
-  name VARCHAR(100) NULL,
-  description VARCHAR(2000) NULL,
-  device_id INT NULL,
-  i2c_address INT NULL,
-  connecting_device_id INT NULL,
-  user_id INT NULL,
-  created DATETIME
-);
-
 CREATE TABLE device_type(
   device_type_id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NULL,
@@ -45,6 +33,9 @@ CREATE TABLE device_type(
 CREATE TABLE device(
   device_id INT AUTO_INCREMENT PRIMARY KEY,
   device_type_id INT,
+  location_name  VARCHAR(100) NULL,
+  i2c_address INT NULL,
+  parent_device_id INT NULL,
   name VARCHAR(100) NULL,
   description VARCHAR(2000) NULL,
   user_id INT NULL,
@@ -89,17 +80,16 @@ CREATE TABLE device_feature(
 );
 
 --fixes for older versions of the schema:
---ALTER TABLE device_feature ADD enabled TINYINT DEFAULT 0;
---ALTER TABLE location ADD device_id INT NULL;
---ALTER TABLE location ADD device_type_feature_id INT NULL;
---ALTER TABLE location ADD i2c_address INT NULL;
---ALTER TABLE location ADD connecting_device_id INT NULL;
---ALTER TABLE location ADD user_id INT NULL;
 --ALTER TABLE device_type ADD user_id INT NULL;
 --ALTER TABLE device ADD user_id INT NULL;
 --ALTER TABLE feature_type ADD user_id INT NULL;
 --ALTER TABLE device_type_feature ADD user_id INT NULL;
 --ALTER TABLE device_feature ADD user_id INT NULL;
+
+--ALTER TABLE device ADD location_name  VARCHAR(100) NULL;
+--ALTER TABLE device ADD i2c_address INT NULL;
+--ALTER TABLE device ADD parent_device_id INT NULL;
+
  
 
 INSERT INTO device_type (name, architecture, power_voltage, created) VALUES ('NodeMCU', 'ESP8266', 3.3, NOW());
