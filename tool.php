@@ -712,10 +712,14 @@ function schemaArrayFromSchema($table, &$pk){
         $type = "hidden";
       }
       if($row["Type"] == "tinyint(4)" ){
-        $type = "checkbox";
+        $type = "bool";
       }
       if($fieldName != "user_id") {
-        $headerData[] = ["label" => $fieldName, "name" => $fieldName, "type" => $type ];
+        $record = ["label" => $fieldName, "name" => $fieldName, "type" => $type ];
+        if($type == "bool"){
+          $record["liveChangeable"] = true;
+        }
+        $headerData[] = $record;
       }
       
     }
@@ -1409,9 +1413,21 @@ function eliminateExtraLinefeeds($input) {
  
 
 function insertUpdateSql($conn, $tableName, $primaryKey, $data) {
+  $_dataRaw = gvfa("_data", $data); 
+  if($_dataRaw){
+    $_data = json_decode($_dataRaw, true);
+  }
   // Check if a primary key is provided
   $sanitizedKeys = [];
-  foreach ($data as $column => $value) {
+  $dataToScan = $_data;
+  if(!$_data){
+    $dataToScan = $data;
+    die();//don't worry about this case
+  }
+ 
+  foreach ($dataToScan as $datum) {
+    $column = $datum["name"];
+    $value = gvfa($column, $data, "");
     if($column  != "_data") {
       if($column == "created") {
 
@@ -1424,38 +1440,52 @@ function insertUpdateSql($conn, $tableName, $primaryKey, $data) {
         $sanitizedData[] = $sanitized;
         
       }
+      //echo $column . "<BR>";
       $sanitizedKeys[] = $column;
     }
-    if (!empty($primaryKey) && implode(",", array_values($primaryKey)) != "") {
-        // Update the existing record
-        $sanitizedData = [];
-        $updateFields = [];
-        //$sanitizedKeys = [];
-        foreach ($data as $column => $value) {
-          if($column != "_data") {
-            $sanitized = mysqli_real_escape_string($conn, $value);
-            $updateFields[] = "`$column` =  '$sanitized'";
-          }
-        }
-
-        $updateFieldsString = implode(', ', $updateFields);
-
-        $whereClause = [];
-        foreach ($primaryKey as $key => $value) {
-            $whereClause[] = "`$key` = '$value'";
-        }
-
-        $whereClauseString = implode(' AND ', $whereClause);
-
-        $sql = "UPDATE `$tableName` SET $updateFieldsString WHERE $whereClauseString;";
-    } else {
-        // Insert a new record
-        $columns = implode(', ', $sanitizedKeys);
-        $values = implode("', '", $sanitizedData);
-
-        $sql = "INSERT INTO `$tableName` ($columns) VALUES ('$values');";
-    }
   }
+ 
+  if (!empty($primaryKey) && implode(",", array_values($primaryKey)) != "") {
+      // Update the existing record
+      $sanitizedData = [];
+      $updateFields = [];
+      //$sanitizedKeys = [];
+      foreach ($dataToScan as $datum) {
+        $column = $datum["name"];
+        $type =  gvfa("type", $datum, "");
+        $value = gvfa($column, $data, "");
+
+        //echo  $column . "=" . $value . ", " . $type . "<BR>";
+        if($column != "created" && $column != "_data" && array_key_exists($column, $primaryKey) == false) {
+          if(($type == "bool"  || $type == "checkbox") && !$value){
+            $sanitized = '0';
+          } else {
+            $sanitized = mysqli_real_escape_string($conn, $value);
+          }
+
+          $updateFields[] = "`$column` =  '$sanitized'";
+        }
+      }
+
+      $updateFieldsString = implode(', ', $updateFields);
+
+      $whereClause = [];
+      foreach ($primaryKey as $key => $value) {
+          $whereClause[] = "`$key` = '$value'";
+      }
+
+      $whereClauseString = implode(' AND ', $whereClause);
+
+      $sql = "UPDATE `$tableName` SET $updateFieldsString WHERE $whereClauseString;";
+  } else {
+      // Insert a new record
+      $columns = implode(', ', $sanitizedKeys);
+      $values = implode("', '", $sanitizedData);
+
+      $sql = "INSERT INTO `$tableName` ($columns) VALUES ('$values');";
+  }
+  
+  //die($sql);
   return $sql;
 }
 
