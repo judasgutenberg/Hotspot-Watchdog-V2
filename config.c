@@ -20,14 +20,13 @@ const int granularityWhenInConnectionFailureMode = 5; //40 was too little time f
 const int numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot = 4; //reboots moxee four times in 340 seconds (number below) and then reboots itself
 const int hotspotLimitedTimeFrame = 340; //seconds
 
-const int moxeePowerSwitch = 13; //usually 14
-
+const int moxeePowerSwitch = 14; //usually 14
 
 //if you are using a DHT hygrometer/temperature probe, these values will be important
 //particularly if you reflashed a MySpool temperature probe with custom firmware
-//on those dhtPin is 14 and dht
-const int dhtPin = 14; //usually 14
-const int dhtPower = 12; //usually 14
+//on those dhtPin is 14 and dhtPower is 12
+const int dhtPin = 13; 
+const int dhtPower = 12;
 // #define dhType DHT11 // DHT 11
 // #define dhType DHT22 // DHT 22, AM2302, AM2321
 const int dhtType = 21; // DHT 21, AM2301
