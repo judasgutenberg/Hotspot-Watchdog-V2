@@ -23,9 +23,9 @@ const int hotspotLimitedTimeFrame = 340; //seconds
 const int moxeePowerSwitch = 14; //usually 14
 
 //if you are using a DHT hygrometer/temperature probe, these values will be important
-//particularly if you reflashed a MySpool temperature probe with custom firmware
-//on those dhtPin is 14 and dhtPower is 12
-const int dhtPin = 13; 
+//particularly if you reflashed a MySpool temperature probe (https://myspool.com/) with custom firmware
+//on those, the dhtData is 14 and dhtPower is 12
+const int dhtData = 13; 
 const int dhtPower = 12;
 // #define dhType DHT11 // DHT 11
 // #define dhType DHT22 // DHT 22, AM2302, AM2321
