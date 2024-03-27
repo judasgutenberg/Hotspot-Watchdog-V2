@@ -27,9 +27,11 @@ const int deepSleepTimePerLoop = 12;  //in seconds. saves energy.  set to zero i
 //if you are using a DHT hygrometer/temperature probe, these values will be important
 //particularly if you reflashed a MySpool temperature probe (https://myspool.com/) with custom firmware
 //on those, the dhtData is 14 and dhtPower is 12
-const int dhtData = 13; 
+const int dhtData = 14; 
 const int dhtPower = 12;
 // #define dhType DHT11 // DHT 11
 // #define dhType DHT22 // DHT 22, AM2302, AM2321
 const int dhtType = 21; // DHT 21, AM2301
+
+const char pinsToStartLow[] = {12, 13, -1}; //so when the device comes up it doesn't immediately turn on attached devices
  
