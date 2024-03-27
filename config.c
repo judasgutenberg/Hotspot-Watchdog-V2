@@ -20,7 +20,9 @@ const int granularityWhenInConnectionFailureMode = 5; //40 was too little time f
 const int numberOfHotspotRebootsOverLimitedTimeframeBeforeEspReboot = 4; //reboots moxee four times in 340 seconds (number below) and then reboots itself
 const int hotspotLimitedTimeFrame = 340; //seconds
 
-const int moxeePowerSwitch = 14; //usually 14
+const int moxeePowerSwitch = 13; //usually 14
+
+const int deepSleepTimePerLoop = 12;  //in seconds. saves energy.  set to zero if unneeded
 
 //if you are using a DHT hygrometer/temperature probe, these values will be important
 //particularly if you reflashed a MySpool temperature probe (https://myspool.com/) with custom firmware
